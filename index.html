@@ -572,7 +572,8 @@
       background: var(--green-pale);
     }
     .search-cta strong { font-family: "Newsreader", serif; font-size: 23px; line-height: 1.15; }
-    .search-cta .actions { flex-shrink: 0; }
+    .search-cta-note { flex: 0 0 100%; margin: 0; color: var(--muted); font-size: 14px; }
+    .search-cta .actions { width: min(100%, 720px); flex-shrink: 1; }
     .search-cta .button.secondary { min-height: 46px; }
 
     .genre-quick-picks {
@@ -903,6 +904,7 @@
         <div class="search-cta">
           <strong id="genre-cta-title">Get the full list</strong>
           <div class="actions">
+            <p class="search-cta-note">Need the complete list for any genre and any area? We build it from 17.4M+ business records with full contact details and deliver within 24 hours.</p>
             <a class="button primary" id="genre-cta" href="mailto:hello@clientregion.com?subject=Full%20list%20request">Get the full list</a>
             <a class="button secondary" href="mailto:hello@clientregion.com?subject=Notify%20me%20about%20Client%20Region%20updates">Notify me</a>
           </div>
@@ -1359,15 +1361,21 @@
       }
 
       function updateCta(category, location) {
-        var body = "Genre: " + formatGenre(category.c);
-        if (location) body += "\nLocation: " + location;
-        genreCta.href = "mailto:hello@clientregion.com?subject=Full%20list%20request&body=" + encodeURIComponent(body);
+        var genre = category ? formatGenre(category.c) : genreFilter.value.trim();
+        var area = String(location || "").trim();
+        var subject = "Full list request";
+        if (genre && area) subject += ": " + genre + " in " + area;
+        else if (genre) subject += ": " + genre;
+        else if (area) subject += " in " + area;
+        var body = "Genre: " + (genre || "Not selected") + "\nLocation: " + (area || "Not selected");
+        genreCta.href = "mailto:hello@clientregion.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
       }
 
       function renderSampleResults(categoryOverride) {
         var category = categoryOverride || resolveGenre(genreFilter.value);
         var location = locationFilter.value.trim();
         sampleResults.replaceChildren();
+        updateCta(category, location);
 
         if (!category) {
           resultsCount.textContent = "Genre not found — choose one of the autocomplete suggestions.";
@@ -1380,7 +1388,6 @@
         setActiveChip(category.c);
         var states = stateCount(category);
         resultsCount.textContent = formatGenre(category.c) + " — " + numberFormat.format(category.n) + " businesses across " + states + " " + (states === 1 ? "state" : "states") + ". Showing samples.";
-        updateCta(category, location);
 
         var categorySamples = sampleData.filter(function (record) {
           return record.t === category.c && record.c && record.k && record.s;
@@ -1453,7 +1460,13 @@
         closeGenreSuggestions();
         renderSampleResults();
       });
-      genreFilter.addEventListener("input", renderGenreSuggestions);
+      genreFilter.addEventListener("input", function () {
+        renderGenreSuggestions();
+        updateCta(resolveGenre(genreFilter.value), locationFilter.value);
+      });
+      locationFilter.addEventListener("input", function () {
+        updateCta(resolveGenre(genreFilter.value), locationFilter.value);
+      });
       genreFilter.addEventListener("focus", renderGenreSuggestions);
       genreFilter.addEventListener("blur", function () {
         window.setTimeout(closeGenreSuggestions, 100);
