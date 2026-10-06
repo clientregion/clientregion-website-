@@ -465,7 +465,42 @@
       border-bottom: 1px solid var(--line);
     }
     .search-field { display: grid; gap: 7px; }
+    .search-field.genre-field { position: relative; }
     .search-field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .genre-suggestions {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 5px);
+      left: 0;
+      right: 0;
+      max-height: 286px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .genre-suggestions[hidden] { display: none; }
+    .genre-suggestion {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 13px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: var(--surface);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+    }
+    .genre-suggestion:last-child { border-bottom: 0; }
+    .genre-suggestion:hover,
+    .genre-suggestion[aria-selected="true"] { background: var(--green-pale); color: var(--green-dark); }
+    .genre-suggestion strong { font-size: 14px; }
+    .genre-suggestion span { color: var(--muted); font-size: 12px; white-space: nowrap; }
     .search-field select,
     .search-field input {
       width: 100%;
@@ -844,10 +879,10 @@
 
       <div class="search-shell">
         <form class="search-controls" id="sample-form">
-          <div class="search-field">
+          <div class="search-field genre-field">
             <label for="genre-filter">Business genre</label>
-            <input id="genre-filter" name="genre" type="search" list="genre-options" placeholder="Try Hair Salon" autocomplete="off" role="combobox" aria-controls="genre-options" />
-            <datalist id="genre-options"></datalist>
+            <input id="genre-filter" name="genre" type="search" placeholder="Try Hair Salon" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="genre-suggestions" aria-expanded="false" />
+            <div class="genre-suggestions" id="genre-suggestions" role="listbox" hidden></div>
           </div>
           <div class="search-field">
             <label for="location-filter">State, county, city, or ZIP</label>
@@ -913,7 +948,7 @@
         <div class="section-index">02 / Pricing</div>
         <div>
           <h2>Buy the market you need, once.</h2>
-          <p>Client Region launches with straightforward one-time pricing. There is no subscription yet: purchase a focused list and keep the spreadsheet.</p>
+          <p>Lead packs for any industry — 2,049 business genres across all 50 states. Straightforward one-time pricing: purchase a focused list and keep the spreadsheet.</p>
         </div>
       </div>
       <div class="pricing-grid">
@@ -923,21 +958,23 @@
           <p>Plumbing, HVAC, and roofing businesses across North Carolina, South Carolina, and Tennessee.</p>
           <div class="price">$49</div>
           <div class="price-note">One-time purchase</div>
-          <a class="button primary" href="https://prentisscollection.gumroad.com/l/mqldcu" target="_blank" rel="noopener">Buy now</a>
+          <a class="button primary" href="https://prentisscollection.gumroad.com/l/nc-sc-tn-home-services" target="_blank" rel="noopener">Buy now</a>
         </article>
         <article class="price-card">
           <div class="price-label">FOCUSED</div>
           <h3>Single-trade pack</h3>
-          <p>One trade, such as plumbing, organized as its own focused list.</p>
+          <p>One business category — any of 2,049 genres — as its own focused list.</p>
           <div class="price">$29</div>
           <div class="price-note">Each · one-time purchase</div>
+          <a class="button primary" href="mailto:hello@clientregion.com?subject=Single-trade%20pack%20request">Request</a>
         </article>
         <article class="price-card">
           <div class="price-label">BROADER COVERAGE</div>
           <h3>Full state bundle</h3>
-          <p>Every available trade in one state, delivered as a filterable bundle.</p>
+          <p>Every available category in one state, delivered as a filterable bundle.</p>
           <div class="price">$99</div>
           <div class="price-note">Per state · one-time purchase</div>
+          <a class="button primary" href="mailto:hello@clientregion.com?subject=Full%20state%20bundle%20request">Request</a>
         </article>
         <article class="price-card">
           <div class="price-label">BUILT TO REQUEST</div>
@@ -945,6 +982,7 @@
           <p>A specific region and business category reviewed and quoted for your request.</p>
           <div class="price">From $200</div>
           <div class="price-note">Quoted per request</div>
+          <a class="button primary" href="mailto:hello@clientregion.com?subject=Custom%20list%20request">Get a quote</a>
         </article>
       </div>
       <p class="pricing-model"><strong>One-time purchase model:</strong> subscriptions may be considered later, after additional regions and regularly refreshed packs are available.</p>
@@ -1094,7 +1132,7 @@
       var sampleForm = document.getElementById("sample-form");
       var genreFilter = document.getElementById("genre-filter");
       var locationFilter = document.getElementById("location-filter");
-      var genreOptions = document.getElementById("genre-options");
+      var genreSuggestions = document.getElementById("genre-suggestions");
       var genreChips = document.getElementById("genre-chips");
       var resultsCount = document.getElementById("results-count");
       var sampleResults = document.getElementById("sample-results");
@@ -1122,21 +1160,61 @@
       }, Object.create(null));
       delete stateCodes.DC;
 
+      var genreLabelOverrides = {
+        hvac_service: "HVAC",
+        roofing: "Roofing Contractor"
+      };
+      var genreAliases = {
+        plumbing: ["plumb", "plumber", "plumbers"],
+        roofing: ["roof", "roofer", "roofers", "roofing contractor"],
+        hvac_service: ["hvac", "heating ventilation air conditioning"],
+        electrician: ["electrician", "electricians", "electrical"]
+      };
+      var activeSuggestionIndex = -1;
+
       function formatGenre(value) {
-        return String(value || "").split(/[_-]+/).filter(Boolean).map(function (word) {
-          if (word.toLowerCase() === "hvac") return "HVAC";
+        var slug = String(value || "").toLowerCase();
+        if (genreLabelOverrides[slug]) return genreLabelOverrides[slug];
+        return slug.split(/[_-]+/).filter(Boolean).map(function (word) {
+          if (word === "hvac") return "HVAC";
           return word.charAt(0).toUpperCase() + word.slice(1);
         }).join(" ");
+      }
+
+      function normalizeGenreQuery(value) {
+        var query = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+        if (query.length > 2 && query.charAt(query.length - 1) === "s") query = query.slice(0, -1);
+        return query;
+      }
+
+      function genreTerms(item) {
+        return [item.c.replace(/[_-]+/g, " "), formatGenre(item.c)].concat(genreAliases[item.c] || []).map(function (term) {
+          return normalizeGenreQuery(term);
+        });
+      }
+
+      function genreMatchScore(item, query) {
+        var normalized = normalizeGenreQuery(query);
+        if (!normalized) return 3;
+        var terms = genreTerms(item);
+        if (terms.some(function (term) { return term === normalized; })) return 0;
+        if (terms.some(function (term) { return term.indexOf(normalized) === 0; })) return 1;
+        if (terms.some(function (term) { return term.indexOf(normalized) !== -1; })) return 2;
+        return -1;
+      }
+
+      function matchingGenres(query) {
+        return categories.filter(function (item) {
+          return genreMatchScore(item, query) !== -1;
+        }).sort(function (a, b) {
+          return genreMatchScore(a, query) - genreMatchScore(b, query) || b.n - a.n;
+        });
       }
 
       categories.forEach(function (item) {
         var label = formatGenre(item.c);
         categoryBySlug[item.c.toLowerCase()] = item;
         categoryByLabel[label.toLowerCase()] = item;
-        var option = document.createElement("option");
-        option.value = label;
-        option.label = numberFormat.format(item.n) + " businesses";
-        genreOptions.appendChild(option);
       });
 
       function resolveGenre(value) {
@@ -1145,12 +1223,68 @@
         if (categoryByLabel[query]) return categoryByLabel[query];
         var slugQuery = query.replace(/\s+/g, "_");
         if (categoryBySlug[slugQuery]) return categoryBySlug[slugQuery];
-        var starts = categories.find(function (item) { return formatGenre(item.c).toLowerCase().indexOf(query) === 0; });
-        if (starts) return starts;
-        return categories.find(function (item) { return formatGenre(item.c).toLowerCase().indexOf(query) !== -1; }) || null;
+        return matchingGenres(query)[0] || null;
       }
 
-      categories.slice(0, 12).forEach(function (item) {
+      function closeGenreSuggestions() {
+        activeSuggestionIndex = -1;
+        genreSuggestions.hidden = true;
+        genreFilter.setAttribute("aria-expanded", "false");
+        genreFilter.removeAttribute("aria-activedescendant");
+      }
+
+      function selectGenreSuggestion(item) {
+        genreFilter.value = formatGenre(item.c);
+        closeGenreSuggestions();
+        renderSampleResults(item);
+      }
+
+      function setActiveSuggestion(index) {
+        var options = genreSuggestions.querySelectorAll(".genre-suggestion");
+        if (!options.length) return;
+        activeSuggestionIndex = (index + options.length) % options.length;
+        options.forEach(function (option, optionIndex) {
+          option.setAttribute("aria-selected", optionIndex === activeSuggestionIndex ? "true" : "false");
+        });
+        genreFilter.setAttribute("aria-activedescendant", options[activeSuggestionIndex].id);
+        options[activeSuggestionIndex].scrollIntoView({ block: "nearest" });
+      }
+
+      function renderGenreSuggestions() {
+        var matches = matchingGenres(genreFilter.value).slice(0, 10);
+        genreSuggestions.replaceChildren();
+        activeSuggestionIndex = -1;
+        if (!matches.length) {
+          closeGenreSuggestions();
+          return;
+        }
+        matches.forEach(function (item, index) {
+          var option = document.createElement("button");
+          option.type = "button";
+          option.className = "genre-suggestion";
+          option.id = "genre-suggestion-" + index;
+          option.setAttribute("role", "option");
+          option.setAttribute("aria-selected", "false");
+          option.appendChild(makeText("strong", "", formatGenre(item.c)));
+          option.appendChild(makeText("span", "", numberFormat.format(item.n) + " businesses"));
+          option.addEventListener("pointerdown", function (event) { event.preventDefault(); });
+          option.addEventListener("click", function () { selectGenreSuggestion(item); });
+          genreSuggestions.appendChild(option);
+        });
+        genreSuggestions.hidden = false;
+        genreFilter.setAttribute("aria-expanded", "true");
+      }
+
+      var featuredGenreSlugs = ["plumbing", "hvac_service", "roofing"];
+      var popularCategories = featuredGenreSlugs.map(function (slug) {
+        return categoryBySlug[slug];
+      }).filter(Boolean).concat(categories.filter(function (item) {
+        return featuredGenreSlugs.indexOf(item.c) === -1;
+      }).sort(function (a, b) {
+        return b.n - a.n;
+      }).slice(0, 9));
+
+      popularCategories.forEach(function (item) {
         var chip = document.createElement("button");
         chip.type = "button";
         chip.className = "genre-chip";
@@ -1159,6 +1293,7 @@
         chip.textContent = formatGenre(item.c);
         chip.addEventListener("click", function () {
           genreFilter.value = formatGenre(item.c);
+          closeGenreSuggestions();
           renderSampleResults(item);
         });
         genreChips.appendChild(chip);
@@ -1247,9 +1382,14 @@
         resultsCount.textContent = formatGenre(category.c) + " — " + numberFormat.format(category.n) + " businesses across " + states + " " + (states === 1 ? "state" : "states") + ". Showing samples.";
         updateCta(category, location);
 
-        var matches = sampleData.filter(function (record) {
-          return record.t === category.c && record.c && record.k && record.s && locationMatches(record, location);
+        var categorySamples = sampleData.filter(function (record) {
+          return record.t === category.c && record.c && record.k && record.s;
         });
+        var matches = categorySamples.filter(function (record) {
+          return locationMatches(record, location);
+        });
+        var usedLocationFallback = Boolean(location) && !matches.length;
+        if (usedLocationFallback) matches = categorySamples.slice();
         matches.sort(function (a, b) {
           var featuredDifference = (b.f || 0) - (a.f || 0);
           return featuredDifference || String(a.n).localeCompare(String(b.n));
@@ -1258,6 +1398,10 @@
         if (!matches.length) {
           sampleResults.appendChild(makeText("p", "search-empty", "No samples in this exact spot — the directory shows a rotating sample of 2,400 records from 17.4M+ businesses, so smaller towns don't always appear. Try a county, state, or ZIP, or email us for the full list for any place."));
           return;
+        }
+
+        if (usedLocationFallback) {
+          sampleResults.appendChild(makeText("p", "search-empty", "No samples in " + location + " yet — showing " + formatGenre(category.c) + " samples from across the US. The directory shows a rotating sample of 2,400 records from 17.4M+ businesses, so smaller towns don't always appear."));
         }
 
         matches.slice(0, 20).forEach(function (record) {
@@ -1306,9 +1450,28 @@
 
       sampleForm.addEventListener("submit", function (event) {
         event.preventDefault();
+        closeGenreSuggestions();
         renderSampleResults();
       });
-      genreFilter.addEventListener("change", function () { renderSampleResults(); });
+      genreFilter.addEventListener("input", renderGenreSuggestions);
+      genreFilter.addEventListener("focus", renderGenreSuggestions);
+      genreFilter.addEventListener("blur", function () {
+        window.setTimeout(closeGenreSuggestions, 100);
+      });
+      genreFilter.addEventListener("keydown", function (event) {
+        var options = genreSuggestions.querySelectorAll(".genre-suggestion");
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          if (genreSuggestions.hidden) renderGenreSuggestions();
+          setActiveSuggestion(activeSuggestionIndex + (event.key === "ArrowDown" ? 1 : -1));
+        } else if (event.key === "Enter" && !genreSuggestions.hidden && activeSuggestionIndex >= 0) {
+          event.preventDefault();
+          var selected = genreSuggestions.querySelectorAll(".genre-suggestion")[activeSuggestionIndex];
+          if (selected) selected.click();
+        } else if (event.key === "Escape") {
+          closeGenreSuggestions();
+        }
+      });
       genreFilter.value = formatGenre(categories[0].c);
       renderSampleResults(categories[0]);
 
