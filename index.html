@@ -923,6 +923,7 @@
           <p>Plumbing, HVAC, and roofing businesses across North Carolina, South Carolina, and Tennessee.</p>
           <div class="price">$49</div>
           <div class="price-note">One-time purchase</div>
+          <a class="button primary" href="https://prentisscollection.gumroad.com/l/mqldcu" target="_blank" rel="noopener">Buy now</a>
         </article>
         <article class="price-card">
           <div class="price-label">FOCUSED</div>
@@ -1180,6 +1181,15 @@
       function locationMatches(record, query) {
         var normalized = String(query || "").trim().toLowerCase();
         if (!normalized) return true;
+        var tokens = normalized.split(/\s+/);
+        if (tokens.length > 1) {
+          var locationText = [record.c, record.k, record.s, record.z].map(function (value) {
+            return String(value || "").toLowerCase();
+          }).join(" ");
+          return tokens.every(function (token) {
+            return locationText.indexOf(token) !== -1;
+          });
+        }
         var stateCode = stateNames[normalized] || "";
         if (!stateCode && normalized.length >= 3) {
           Object.keys(stateNames).some(function (name) {
@@ -1226,7 +1236,7 @@
 
         if (!category) {
           resultsCount.textContent = "Genre not found — choose one of the autocomplete suggestions.";
-          sampleResults.appendChild(makeText("p", "search-empty", "No samples for this search — try another genre or place."));
+          sampleResults.appendChild(makeText("p", "search-empty", "No samples in this exact spot — the directory shows a rotating sample of 2,400 records from 17.4M+ businesses, so smaller towns don't always appear. Try a county, state, or ZIP, or email us for the full list for any place."));
           setActiveChip("");
           return;
         }
@@ -1246,7 +1256,7 @@
         });
 
         if (!matches.length) {
-          sampleResults.appendChild(makeText("p", "search-empty", "No samples for this search — try another genre or place."));
+          sampleResults.appendChild(makeText("p", "search-empty", "No samples in this exact spot — the directory shows a rotating sample of 2,400 records from 17.4M+ businesses, so smaller towns don't always appear. Try a county, state, or ZIP, or email us for the full list for any place."));
           return;
         }
 
