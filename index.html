@@ -930,7 +930,7 @@
     <a class="brand-mark" href="#top" aria-label="ClientRegion home">ClientRegion</a>
     <div class="utility-links">
       <a href="#coverage">Coverage</a>
-      <a href="#pricing">Pricing</a>
+      <a href="#pricing">Pricing</a>      <a href="#receptionist">AI receptionist</a>
       <a href="#responsible-use">Responsible use</a>
       <button class="contact-link request-trigger" type="button" data-request-mode="general">
         Contact
@@ -966,6 +966,50 @@
         </div>
       </div>
     </header>
+<section id="receptionist" class="wrap">
+  <div class="section-intro">
+    <div class="section-index">New service</div>
+    <div>
+      <h2>Every call answered. Even the ones you miss.</h2>
+      <p>Client Region&rsquo;s AI receptionist answers your business phone around the clock &mdash; in your name, in your voice &mdash; so a missed call never means a missed client.</p>
+    </div>
+  </div>
+  <div class="use-grid">
+    <article class="use-card">
+      <h3>Answers in your name</h3>
+      <p>Greets every caller as your business and answers the questions you already know &mdash; hours, services, location, and next steps.</p>
+    </article>
+    <article class="use-card">
+      <h3>Takes a real message</h3>
+      <p>Captures the caller&rsquo;s name, reason for calling, and the best way to reach them, then sends it straight to you &mdash; no voicemail black hole.</p>
+    </article>
+    <article class="use-card">
+      <h3>Helps book the visit</h3>
+      <p>Qualifies the caller and helps them take the next step &mdash; booking, requesting a call back, or getting the information they need.</p>
+    </article>
+  </div>
+  <div class="compliance-grid" style="margin-top: 36px;">
+    <article class="price-card featured">
+      <div class="price-label">ONE-TIME SETUP</div>
+      <h3>AI receptionist setup</h3>
+      <p>We build and configure your AI receptionist for your business: your greeting, your answers, and your call flow.</p>
+      <div class="price">$499</div>
+      <div class="price-note">One-time setup</div>
+    </article>
+    <article class="price-card">
+      <div class="price-label">CARE PLAN</div>
+      <h3>Care plan</h3>
+      <p>Ongoing monitoring, updates, and support to keep your receptionist answering well as your business changes.</p>
+      <div class="price">$49/mo</div>
+      <div class="price-note">Per month &middot; care plan</div>
+    </article>
+  </div>
+  <div class="actions" style="margin-top: 28px;">
+    <button class="button primary request-trigger" type="button" data-request-mode="receptionist">Request your free demo</button>
+    <a class="button secondary" href="mailto:hello@clientregion.com">hello@clientregion.com</a>
+  </div>
+  <p class="pricing-model"><strong>Free personalized demo:</strong> tell us about your business and we will show you the AI receptionist answering as your business &mdash; free, with no obligation.</p>
+</section>
 
     <aside class="signal" aria-label="Offer summary">
       <div class="signal-inner wrap">
@@ -1682,7 +1726,18 @@
             { name: "message", label: "Message", type: "textarea", full: true }
           ]
         },
-        notify: {
+        receptionist: {
+      title: "Request your free AI receptionist demo",
+      subject: "AI receptionist demo request",
+      product: "AI receptionist ($499 setup + $49/mo care plan)",
+      fields: [
+        { name: "name", label: "Name", type: "text", autocomplete: "name", required: true },
+        { name: "email", label: "Email", type: "email", autocomplete: "email", required: true },
+        { name: "business", label: "Business", type: "text", full: true },
+        { name: "message", label: "Message", type: "textarea", full: true, value: "I'd like a free personalized demo of the AI receptionist for my business." }
+      ]
+    },
+    notify: {
           title: "Get directory updates",
           subject: "Client Region directory update request",
           fields: [
